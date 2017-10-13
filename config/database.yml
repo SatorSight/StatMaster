@@ -13,20 +13,31 @@ default: &default
   adapter: mysql2
   encoding: utf8
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: 185.22.63.2
   username: root
-  password:
-  socket: /var/run/mysqld/mysqld.sock
+  password: sNae61
+  database: kioskdev
+  port: 3306
+
+#  socket: /var/run/mysqld/mysqld.sock
 
 development:
   <<: *default
-  database: StatMaster_development
+  adapter: mysql2
+  encoding: utf8
+  pool: 5
+  host: 185.22.63.2
+  username: root
+  password: sNae61
+  database: kioskdev
+  port: 3306
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: StatMaster_test
+  database: StatMaker_test
 
 # As with config/secrets.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -49,6 +60,6 @@ test:
 #
 production:
   <<: *default
-  database: StatMaster_production
-  username: StatMaster
-  password: <%= ENV['STATMASTER_DATABASE_PASSWORD'] %>
+  database: StatMaker_production
+  username: StatMaker
+  password: <%= ENV['STATMAKER_DATABASE_PASSWORD'] %>
