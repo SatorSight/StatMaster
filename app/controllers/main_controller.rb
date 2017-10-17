@@ -17,20 +17,7 @@ class MainController < ApplicationController
 
     stat_results = StatResult.where(service: service, stat_type: selected_stat_type).order(updated_at: :desc)
 
-
-    initial_rows = []
-    stat_results.each do |res|
-      element = {}
-
-      element['id'] = res.id
-      element['service'] = res.service.title
-      element['date'] = res.updated_at.strftime("%Y-%m-%d")
-      element['value'] = res.value
-
-      initial_rows.push element
-    end
-
-    table['rows'] = initial_rows
+    table['rows'] = StatResult::to_rows(stat_results)
 
     all_services = Service.all
     all_services_array = []
@@ -42,17 +29,11 @@ class MainController < ApplicationController
       all_services_array.push element
     end
 
-
-
     @props = {}
     @props['stat_types'] = stat_types
     @props['all_services'] = all_services_array
     @props['table'] = table
 
-    # @header_row = header_row
-    # @rows = rows
-
-    # @hello_world_props = { name: "StatMaster" }
   end
 
   def renew_data
@@ -74,19 +55,6 @@ class MainController < ApplicationController
 
     stat_results = stat_results.order updated_at: :desc
 
-    table_rows = []
-
-    stat_results.each do |res|
-      row = {}
-
-      row['id'] = res.id
-      row['service'] = res.service.title
-      row['date'] = res.updated_at.strftime("%Y-%m-%d")
-      row['value'] = res.value
-
-      table_rows.push row
-    end
-
     raw_params = {}
     raw_params['service_id'] = service_id
     raw_params['stat_type_id'] = stat_type_id
@@ -95,7 +63,7 @@ class MainController < ApplicationController
 
     data = {}
     data['params'] = raw_params
-    data['table_rows'] = table_rows
+    data['table_rows'] = StatResult::to_rows(stat_results)
 
     response = {'status':'ok', 'data':data}
 

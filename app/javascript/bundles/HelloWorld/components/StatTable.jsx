@@ -1,4 +1,8 @@
 import React from 'react';
+import ReactOnRails from 'react-on-rails';
+ReactOnRails.register({ LineGraph });
+
+import ReactDOM from 'react-dom';
 import DatePicker from 'material-ui/DatePicker';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
@@ -19,6 +23,7 @@ import {
     TableRowColumn,
 } from 'material-ui/Table';
 import {withStyles, MuiThemeProvider} from 'material-ui/styles';
+import LineGraph from './LineGraph'
 
 export default class StatTable extends React.Component {
 
@@ -37,7 +42,7 @@ export default class StatTable extends React.Component {
             rows: props.table.rows,
             date_from: false,
             date_to: false,
-            progress_style: {display: 'none'}
+            progress_style: {display: 'none'},
         };
     }
 
@@ -147,7 +152,7 @@ export default class StatTable extends React.Component {
                                 </div>
                             </Tab>
                             <Tab label="Graph">
-                                Coming soon™
+                                <LineGraph data={this.state.rows.reverse()}/>
                             </Tab>
                         </Tabs>
                     </Card>
