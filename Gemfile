@@ -36,6 +36,12 @@ gem 'connection_pool', '~> 2.2', '>= 2.2.1'
 
 gem 'webpacker'
 
+# gem 'bitbucket_rest_api'
+
+gem 'oauth2'
+
+gem 'hashie'
+
 
 # Use Capistrano for deployment
 # gem 'capistrano-rails', group: :development

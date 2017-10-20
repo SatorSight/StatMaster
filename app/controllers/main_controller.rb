@@ -70,4 +70,66 @@ class MainController < ApplicationController
     render :json => response
 
   end
+
+  def commits_data
+    require 'bitbucket_rest_api'
+
+    Hashie.logger = Logger.new(nil)
+
+    bitbucket_username = 'docomodigital'
+    bitbucket_password = 'dn5CNacz8TT9aqZZ8gAd'
+
+    bitbucket = BitBucket.new :basic_auth => "#{bitbucket_username}:#{bitbucket_password}"
+
+    response = bitbucket.get_request("/repositories/#{bitbucket_username}/kioskplus/commits/")
+
+    hashes_array = []
+    hashes_array.push response.to_hash['values']
+
+    next_page = response['next']
+    next_page.slice! 'https://bitbucket.org/api/2.0'
+
+    2.times do
+      new_page = bitbucket.get_request(next_page)
+
+      hashes_array.push new_page.to_hash['values']
+
+      next_page = new_page['next']
+      next_page.slice! 'https://bitbucket.org/api/2.0'
+    end
+
+    hashes_array.flatten!
+
+    commits_array = []
+    hashes_array.each do |commit|
+      c = {
+          'author' => commit['author']['raw'],
+          'date' => commit['date'],
+          'message' => commit['message']
+      }
+      commits_array.push c
+    end
+
+    commits_array_grouped_by_date = {}
+    commits_array.each do |commit|
+      date = commit['date'].to_date.strftime("%Y-%m-%d")
+
+      commits_array_grouped_by_date[date] = [] unless commits_array_grouped_by_date[date].present?
+      commits_array_grouped_by_date[date].push commit
+    end
+
+    commits_stacked = {}
+    commits_array_grouped_by_date.each do |key, c_array|
+
+      tooltip = String.new
+      c_array.each do |commit|
+        tooltip << commit['message']
+      end
+
+      commits_stacked[key] = tooltip
+    end
+
+    response = {'status':'ok', 'data':commits_stacked}
+    render :json => response
+  end
 end

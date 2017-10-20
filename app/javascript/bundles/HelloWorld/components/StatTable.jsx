@@ -24,6 +24,7 @@ import {
 } from 'material-ui/Table';
 import {withStyles, MuiThemeProvider} from 'material-ui/styles';
 import LineGraph from './LineGraph'
+import sKey from './sKey';
 
 export default class StatTable extends React.Component {
 
@@ -93,7 +94,7 @@ export default class StatTable extends React.Component {
                                 {this.props.all_services.map((service, i) =>
                                     <MenuItem value={service.id}
                                               checked={service.id === this.state.service_selected}
-                                              key={service.id}>{service.label}
+                                              key={sKey('st')}>{service.label}
                                     </MenuItem>
                                 )}
                             </Menu>
@@ -114,35 +115,35 @@ export default class StatTable extends React.Component {
                                     autoWidth={true}
                                     onChange={this.statTypeSelectChanged}>
                                     {this.props.stat_types.map((type, i) =>
-                                        <MenuItem key={i} value={type.id} primaryText={type.title}/>
+                                        <MenuItem key={sKey('st')} value={type.id} primaryText={type.title}/>
                                     )}
                                 </SelectField>
                             </ToolbarGroup>
                             <ToolbarGroup>
-                                <DatePicker onChange={this.dateFromChanged} hintText="From" mode="landscape"/>
+                                <DatePicker key={sKey('st')} onChange={this.dateFromChanged} hintText="From" mode="landscape"/>
                             </ToolbarGroup>
 
                             <ToolbarGroup>
-                                <DatePicker onChange={this.dateToChanged} hintText="To" mode="landscape"/>
+                                <DatePicker key={sKey('st')} onChange={this.dateToChanged} hintText="To" mode="landscape"/>
                             </ToolbarGroup>
                         </Toolbar>
                         <Tabs>
                             <Tab label="Table">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow>
+                                        <TableRow key={sKey('st')}>
                                             {this.props.table.header_row.map((type, i) =>
-                                                <TableHeaderColumn key={i}>{type}</TableHeaderColumn>
+                                                <TableHeaderColumn key={sKey('st')}>{type}</TableHeaderColumn>
                                             )}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {this.state.rows.map((type, i) =>
-                                            <TableRow>
-                                                <TableRowColumn key={type.id}>{type.id}</TableRowColumn>
-                                                <TableRowColumn key={type.id}>{type.service}</TableRowColumn>
-                                                <TableRowColumn key={type.id}>{type.date}</TableRowColumn>
-                                                <TableRowColumn key={type.id}>{type.value}</TableRowColumn>
+                                            <TableRow key={sKey('st')}>
+                                                <TableRowColumn key={sKey('st')}>{type.id}</TableRowColumn>
+                                                <TableRowColumn key={sKey('st')}>{type.service}</TableRowColumn>
+                                                <TableRowColumn key={sKey('st')}>{type.date}</TableRowColumn>
+                                                <TableRowColumn key={sKey('st')}>{type.value}</TableRowColumn>
                                             </TableRow>
                                         )}
                                     </TableBody>
