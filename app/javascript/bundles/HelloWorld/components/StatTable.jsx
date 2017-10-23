@@ -2,7 +2,6 @@ import React from 'react';
 import ReactOnRails from 'react-on-rails';
 ReactOnRails.register({ LineGraph });
 
-import ReactDOM from 'react-dom';
 import DatePicker from 'material-ui/DatePicker';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
@@ -14,6 +13,9 @@ import {Toolbar, ToolbarGroup, ToolbarTitle} from 'material-ui/Toolbar';
 import {Tabs, Tab} from 'material-ui/Tabs';
 import CircularProgress from 'material-ui/CircularProgress';
 import {Card, CardTitle, CardText} from 'material-ui/Card';
+import RaisedButton from 'material-ui/RaisedButton';
+import FileDownload from 'material-ui/svg-icons/file/file-download';
+
 import {
     Table,
     TableBody,
@@ -61,13 +63,7 @@ export default class StatTable extends React.Component {
 
     renewTable = () => {
         this.setState({ rows: [], progress_style: { display: 'inline-block' } }, () => {
-            //todo make some query builder
-            let query = '/renew_data?service_id='+this.state.service_selected+'&stat_type_id='+this.state.stat_selected;
-            if(this.state.date_from)
-                query += '&date_from='+this.state.date_from;
-            if(this.state.date_to)
-                query += '&date_to='+this.state.date_to;
-
+            const query = this.makeQuery('renew_data');
             fetch(query)
                 .then((response) => response.json())
                 .then((payload) => {
@@ -75,6 +71,24 @@ export default class StatTable extends React.Component {
                     this.setState({rows: table_rows, progress_style: { display: 'none' }});
                 });
         });
+    };
+
+    makeQuery = (type) => {
+        //todo make some query builder
+        let query = '/'+type+'?service_id='+this.state.service_selected+'&stat_type_id='+this.state.stat_selected;
+        if(this.state.date_from)
+            query += '&date_from='+this.state.date_from;
+        if(this.state.date_to)
+            query += '&date_to='+this.state.date_to;
+        return query;
+    };
+
+    exportCSV = () => {
+        const query = this.makeQuery('csv_data.csv');
+        const response = {
+            file: query,
+        };
+        window.location.href = response.file;
     };
 
     render() {
@@ -125,6 +139,16 @@ export default class StatTable extends React.Component {
 
                             <ToolbarGroup>
                                 <DatePicker key={sKey('st')} onChange={this.dateToChanged} hintText="To" mode="landscape"/>
+                            </ToolbarGroup>
+
+                            <ToolbarGroup>
+                                <RaisedButton
+                                    label="Download csv"
+                                    labelPosition="before"
+                                    primary={true}
+                                    onClick={this.exportCSV}
+                                    icon={<FileDownload />}
+                                />
                             </ToolbarGroup>
                         </Toolbar>
                         <Tabs>
