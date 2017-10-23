@@ -17,4 +17,16 @@ class StatResult < ActiveRecord::Base
     rows
   end
 
+  def self.to_csv(stat_results)
+    attributes = %w{id service date value}
+
+    CSV.generate(headers: true) do |csv|
+      csv << attributes
+
+      stat_results.each do |stat|
+        csv << attributes.map{ |attr| stat[attr] }
+      end
+    end
+  end
+
 end

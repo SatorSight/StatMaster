@@ -33,12 +33,24 @@ export default class LineGraph extends React.Component {
         };
     }
 
+    componentWillReceiveProps(props) {
+        this.setState({
+            graph_width: 600,
+            commits: [],
+            data: props.data
+        }, () => this.realign());
+    }
+
     componentDidMount(){
+        this.realign();
+        this.getCommitsData()
+    }
+
+    realign = () => {
         this.setState({
             graph_width: this.refs.graph.offsetWidth,
         });
-        this.getCommitsData()
-    }
+    };
 
     render() {
         return (
