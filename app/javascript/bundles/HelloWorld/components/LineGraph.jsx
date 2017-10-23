@@ -36,7 +36,7 @@ export default class LineGraph extends React.Component {
     componentWillReceiveProps(props) {
         this.setState({
             graph_width: 600,
-            commits: [],
+            commits: this.state.commits,
             data: props.data
         }, () => this.realign());
     }
