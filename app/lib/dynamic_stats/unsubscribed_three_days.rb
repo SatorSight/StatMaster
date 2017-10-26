@@ -1,0 +1,3 @@
+class UnsubscribedThreeDays
+
+end

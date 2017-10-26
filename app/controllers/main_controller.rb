@@ -2,6 +2,7 @@
 
 class MainController < ApplicationController
 
+  include Results
   def index
 
     table = {}
@@ -141,12 +142,31 @@ class MainController < ApplicationController
       render :json => response and return
     end
 
-    stat_results = StatResult.where(service: service_id, stat_type: stat_type_id)
+    stat_type = StatType.find stat_type_id
+    source_type = stat_type.stat_source_type
 
-    stat_results = stat_results.where('updated_at > ?', DateTime.parse(date_from).strftime("%Y-%m-%d")) if date_from.present?
-    stat_results = stat_results.where('updated_at < ?', DateTime.parse(date_to).strftime("%Y-%m-%d")) if date_to.present?
+    if source_type.code == 'stored'
 
-    stat_results = stat_results.order updated_at: :desc
+      stat_results = StatResult.where(service: service_id, stat_type: stat_type_id)
+
+      stat_results = stat_results.where('updated_at > ?', DateTime.parse(date_from).strftime("%Y-%m-%d")) if date_from.present?
+      stat_results = stat_results.where('updated_at < ?', DateTime.parse(date_to).strftime("%Y-%m-%d")) if date_to.present?
+
+      stat_results = stat_results.order updated_at: :desc
+    else
+      stat_params = {}
+      stat_params['service_id'] = service_id
+      stat_params['date_from'] = date_from
+      stat_params['date_to'] = date_to
+
+      klass = stat_type.stat_class
+
+      handler = Results.const_get(klass).new
+      handler.set_params stat_params
+
+      stat_results = handler.get_results
+    end
+
 
     stat_results
   end
