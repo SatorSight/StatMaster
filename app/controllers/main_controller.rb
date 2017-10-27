@@ -11,7 +11,7 @@ class MainController < ApplicationController
 
     table['header_row'] = header_row
 
-    stat_types = StatType.all
+    stat_types = StatType.all.where stat_source_type_id: 1
 
     selected_stat_type = StatType.first
     service = Service.first
@@ -34,6 +34,8 @@ class MainController < ApplicationController
     @props['stat_types'] = stat_types
     @props['all_services'] = all_services_array
     @props['table'] = table
+    @props['metrics'] = Metrika::Routes.metrics
+    # @props['dates'] = dates
 
   end
 
@@ -167,8 +169,71 @@ class MainController < ApplicationController
       stat_results = handler.get_results
     end
 
-
     stat_results
+  end
+
+  def metrika_get_data(metric, dates_array, counter)
+
+    token = 'AQAAAAAJroNSAASSMsJ5FtIsfEGZmZgr-3zM-sY'
+    client = Metrika::Client.new('3e65055f4bb7474591bec61db2851665', '53d68c7ba4c541eeaae9ad0f4e094d9d')
+    client.restore_token token
+
+    client.set_counter_id counter
+    client.set_metric metric
+
+    data = []
+
+    dates_array.sort_by! {|d| y, m, d=d.split '-'; [y, m, d]}
+
+    date_hashes_array = []
+    dates_array.each_with_index do |date, index|
+      interval = {}
+      unless dates_array[index + 1].nil?
+        if index == 0
+          interval[:date_from] = '2015-01-01'
+          interval[:date_to] = date
+        else
+          interval[:date_from] = date
+          interval[:date_to] = dates_array[index + 1]
+        end
+        date_hashes_array.push interval
+      end
+    end
+
+    date_hashes_array.each do |dates|
+
+      client.set_date_from dates[:date_from]
+      client.set_date_to dates[:date_to]
+
+      response = client.stat_get
+
+      data.push parse_response response
+    end
+
+    data
+  end
+
+  def metrics_data
+    dates = JSON.parse params[:dates]
+    metric = params[:metrics]
+    service = Service.find params[:service_id]
+    counter = service.yandex_counter
+
+    metric_symbol = metric.to_sym
+    metric_code = Metrika::Routes.metrics[metric_symbol]
+
+    data = metrika_get_data metric_code, dates, counter
+
+    response = {'status': 'ok', 'data': data}
+    render :json => response
+  end
+
+  def parse_response(response)
+    resp = {}
+    resp[:value] = response['data'].first['metrics'].first
+    resp[:date] = response['query']['date2']
+
+    resp
   end
 
 end

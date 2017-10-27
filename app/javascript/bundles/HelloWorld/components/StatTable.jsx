@@ -15,6 +15,7 @@ import CircularProgress from 'material-ui/CircularProgress';
 import {Card, CardTitle, CardText} from 'material-ui/Card';
 import RaisedButton from 'material-ui/RaisedButton';
 import FileDownload from 'material-ui/svg-icons/file/file-download';
+import Toggle from 'material-ui/Toggle';
 
 import {
     Table,
@@ -37,7 +38,6 @@ export default class StatTable extends React.Component {
         const selected_service_id = props.all_services[0].id;
 
         this.state = {
-            name: props.name,
             stat_selected: selected_stat_id,
             service_selected: selected_service_id,
             stat_types: props.stat_types,
@@ -46,17 +46,27 @@ export default class StatTable extends React.Component {
             date_from: false,
             date_to: false,
             progress_style: {display: 'none'},
+            metrics: props.metrics,
+            metric_selected: null,
+            metrics_visibility: {display: 'none'},
+            metrics_active: false,
         };
     }
 
     toggleDrawer = () => this.setState({ drawer_open: !this.state.drawer_open });
     closeDrawer = () => this.setState({ drawer_open: false });
+    metricToggleChanged = (event, isInputChecked) => {
+        const display = isInputChecked ? {display: 'inline-block'} : {display: 'none'};
+        this.setState({metrics_visibility: display});
+        this.setState({metrics_active: isInputChecked})
+    };
 
     menuChanged = (event, value) => this.setState({ service_selected: value }, () => {
         this.toggleDrawer();
         this.renewTable();
     });
 
+    handleMetricSelectChange = (event, index, value) => this.setState({metric_selected: value});
     dateFromChanged = (nothing, date) => this.setState({ date_from: date }, () => this.renewTable());
     dateToChanged = (nothing, date) => this.setState({ date_to: date }, () => this.renewTable());
     statTypeSelectChanged = (event, index, value) => this.setState({ stat_selected: value }, () => this.renewTable());
@@ -134,11 +144,13 @@ export default class StatTable extends React.Component {
                                 </SelectField>
                             </ToolbarGroup>
                             <ToolbarGroup>
-                                <DatePicker key={sKey('st')} onChange={this.dateFromChanged} hintText="From" mode="landscape"/>
+                                <DatePicker key={sKey('st')} value={this.state.date_from}
+                                            onChange={this.dateFromChanged} hintText="From" mode="landscape"/>
                             </ToolbarGroup>
 
                             <ToolbarGroup>
-                                <DatePicker key={sKey('st')} onChange={this.dateToChanged} hintText="To" mode="landscape"/>
+                                <DatePicker key={sKey('st')} value={this.state.date_to} onChange={this.dateToChanged}
+                                            hintText="To" mode="landscape"/>
                             </ToolbarGroup>
 
                             <ToolbarGroup>
@@ -149,6 +161,24 @@ export default class StatTable extends React.Component {
                                     onClick={this.exportCSV}
                                     icon={<FileDownload />}
                                 />
+                            </ToolbarGroup>
+                        </Toolbar>
+                        <Toolbar>
+                            <ToolbarGroup>
+                                <Toggle onToggle={this.metricToggleChanged} label="Yandex Metrika"/>
+                            </ToolbarGroup>
+                            <ToolbarGroup style={this.state.metrics_visibility}>
+                                <SelectField
+                                    hintText="Type"
+                                    value={this.state.metric_selected}
+                                    onChange={this.handleMetricSelectChange}
+                                    // multiple={true}
+                                >
+                                    <MenuItem key={sKey('st')} value={null} primaryText=""/>
+                                    {Object.keys(this.state.metrics).map((metric, i) =>
+                                        <MenuItem key={sKey('st')} value={metric} primaryText={metric}/>
+                                    )}
+                                </SelectField>
                             </ToolbarGroup>
                         </Toolbar>
                         <Tabs>
@@ -177,7 +207,11 @@ export default class StatTable extends React.Component {
                                 </div>
                             </Tab>
                             <Tab label="Graph">
-                                <LineGraph data={this.state.rows.reverse()}/>
+                                <LineGraph data={this.state.rows}
+                                           metrics_enabled={this.state.metrics_active}
+                                           metric_selected={this.state.metric_selected}
+                                           service_id={this.state.service_selected}
+                                />
                             </Tab>
                         </Tabs>
                     </Card>
