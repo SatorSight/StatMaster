@@ -7,10 +7,6 @@ class MainController < ApplicationController
 
     table = {}
 
-    header_row = %w(ID Service Date Value)
-
-    table['header_row'] = header_row
-
     stat_types = StatType.all.where stat_source_type_id: 1
 
     selected_stat_type = StatType.first
@@ -19,6 +15,23 @@ class MainController < ApplicationController
     stat_results = StatResult.where(service: service, stat_type: selected_stat_type).order(updated_at: :desc)
 
     table['rows'] = StatResult::to_rows(stat_results)
+
+    service_labels = []
+    table['rows'].each do |row|
+      hash = row.dup
+      hash.delete "date"
+
+      hash.each do |key, val|
+        if key.include? 'value'
+          service_id = key.dup.sub! 'value_', ''
+          title = Service.find(service_id).title
+          service_labels.push title unless service_labels.include? title
+        end
+      end
+    end
+
+    header_row = ['Date']
+    service_labels.each {|label| header_row.push label}
 
     all_services = Service.all
     all_services_array = []
@@ -30,13 +43,14 @@ class MainController < ApplicationController
       all_services_array.push element
     end
 
+    # header_row = %w(ID Service Date Value)
+    table['header_row'] = header_row
+
     @props = {}
     @props['stat_types'] = stat_types
     @props['all_services'] = all_services_array
     @props['table'] = table
     @props['metrics'] = Metrika::Routes.metrics
-    # @props['dates'] = dates
-
   end
 
   def renew_data
@@ -49,11 +63,14 @@ class MainController < ApplicationController
     # raw_params['date_from'] = date_from
     # raw_params['date_to'] = date_to
 
-    data = {}
-    # data['params'] = raw_params
-    data['table_rows'] = StatResult::to_rows(stat_results)
+    if stat_results.nil?
+      response = {'status': 'error', 'data': {}}
+    else
+      data = {}
+      data['table_rows'] = StatResult::to_rows(stat_results)
 
-    response = {'status':'ok', 'data':data}
+      response = {'status': 'ok', 'data': data}
+    end
 
     render :json => response
 
@@ -106,8 +123,10 @@ class MainController < ApplicationController
           'date' => commit['date'],
           'message' => commit['message']
       }
-      commits_array.push c
+      commits_array.push c if commit_message_ok? c['message']
     end
+
+    commits_array = remove_duplicate_commits commits_array
 
     commits_array_grouped_by_date = {}
     commits_array.each do |commit|
@@ -134,27 +153,25 @@ class MainController < ApplicationController
 
   def get_results(params)
 
-    service_id = params[:service_id]
+    service_ids = params[:service_id]
+    service_ids = service_ids.split ','
     stat_type_id = params[:stat_type_id]
     date_from = params[:date_from]
     date_to = params[:date_to]
 
-    if service_id.blank? or stat_type_id.blank?
-      response = {'status':'error', 'data':{}}
-      render :json => response and return
-    end
+    return nil if service_ids.blank? or stat_type_id.blank?
 
     stat_type = StatType.find stat_type_id
     source_type = stat_type.stat_source_type
 
     if source_type.code == 'stored'
 
-      stat_results = StatResult.where(service: service_id, stat_type: stat_type_id)
+      stat_results = StatResult.where(service: service_ids, stat_type: stat_type_id)
 
       stat_results = stat_results.where('updated_at > ?', DateTime.parse(date_from).strftime("%Y-%m-%d")) if date_from.present?
       stat_results = stat_results.where('updated_at < ?', DateTime.parse(date_to).strftime("%Y-%m-%d")) if date_to.present?
 
-      stat_results = stat_results.order updated_at: :desc
+      stat_results = stat_results.order created_at: :desc
     else
       stat_params = {}
       stat_params['service_id'] = service_id
@@ -172,57 +189,47 @@ class MainController < ApplicationController
     stat_results
   end
 
-  def metrika_get_data(metric, dates_array, counter)
+  def metrika_get_data(metric, dates_array, services)
 
     token = 'AQAAAAAJroNSAASSMsJ5FtIsfEGZmZgr-3zM-sY'
     client = Metrika::Client.new('3e65055f4bb7474591bec61db2851665', '53d68c7ba4c541eeaae9ad0f4e094d9d')
     client.restore_token token
-
-    client.set_counter_id counter
     client.set_metric metric
 
-    data = []
-
+    # generate date intervals array for metrics requests
     dates_array.sort_by! {|d| y, m, d=d.split '-'; [y, m, d]}
 
-    date_hashes_array = []
-    dates_array.each_with_index do |date, index|
-      interval = {}
-      unless dates_array[index + 1].nil?
-        if index == 0
-          interval[:date_from] = '2015-01-01'
-          interval[:date_to] = date
-        else
-          interval[:date_from] = date
-          interval[:date_to] = dates_array[index + 1]
-        end
-        date_hashes_array.push interval
+    date_hashes_array = SUtils::dates_to_intervals dates_array
+
+    data = []
+    services.each do |service|
+      client.set_counter_id service.yandex_counter
+      date_hashes_array.each do |dates|
+
+        client.set_date_from dates[:date_from]
+        client.set_date_to dates[:date_to]
+
+        response = client.stat_get
+
+        hash = {service.id => parse_response(response)}
+
+        data.push hash
       end
     end
 
-    date_hashes_array.each do |dates|
-
-      client.set_date_from dates[:date_from]
-      client.set_date_to dates[:date_to]
-
-      response = client.stat_get
-
-      data.push parse_response response
-    end
-
-    data
+    client.group_data data
   end
 
   def metrics_data
     dates = JSON.parse params[:dates]
     metric = params[:metrics]
-    service = Service.find params[:service_id]
-    counter = service.yandex_counter
+    services_ids = params[:service_ids].split ','
+    services = Service.where(id: services_ids)
 
     metric_symbol = metric.to_sym
     metric_code = Metrika::Routes.metrics[metric_symbol]
 
-    data = metrika_get_data metric_code, dates, counter
+    data = metrika_get_data metric_code, dates, services
 
     response = {'status': 'ok', 'data': data}
     render :json => response
@@ -236,4 +243,21 @@ class MainController < ApplicationController
     resp
   end
 
+  def commit_message_ok?(message)
+    true if message.include? '#PRD'
+  end
+
+  def remove_duplicate_commits(commits_array)
+    commit_messages = []
+    # commits_array.each {|c| commit_messages.push c['message'] unless commit_messages.include? c['message']}
+    commits_array.delete_if do |commit|
+      if commit_messages.include? commit['message']
+        true
+      else
+        commit_messages.push commit['message']
+        false
+      end
+    end
+    commits_array
+  end
 end

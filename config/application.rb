@@ -19,6 +19,7 @@ module StatMaster
     Dir.glob("#{config.root}/app/lib/dynamic_stats/**/*.rb").each {|f| require f}
     Dir.glob("#{config.root}/app/lib/metrika/**/*.rb").each {|f| require f}
     Dir.glob("#{config.root}/app/lib/yandex/**/*.rb").each {|f| require f}
+    Dir.glob("#{config.root}/app/lib/SUtils.rb").each {|f| require f}
 
 
       # config.autoload_paths << Rails.root.join('app/lib/dynamic_stats')

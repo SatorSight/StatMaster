@@ -75,6 +75,33 @@ module Metrika
 
     end
 
+    def group_data(data)
+      all_dates = {}
+      grouped_data = []
+
+      data.each do |hash|
+        service_id = hash.keys[0]
+        value_key = 'metric_value_' << service_id.to_s
+        date = hash[service_id][:date]
+        value = hash[service_id][:value]
+        new_hash = {value_key => hash[service_id][:value]}
+
+        if all_dates.key? date
+          all_dates[date][value_key] = value unless all_dates[date].key? value_key
+        else
+          all_dates[date] = new_hash
+        end
+      end
+
+      all_dates.each do |key, val|
+        element = {'date'.freeze => key}
+        val.keys.each {|val_key| element[val_key] = val[val_key]}
+        grouped_data.push element
+      end
+
+      grouped_data.sort_by {|k| k['date']}
+    end
+
 
     protected
 

@@ -7,20 +7,25 @@ class StatResult < ActiveRecord::Base
     stat_results.each do |res|
       element = {}
 
-      element['id'] = res.id
-      element['service'] = res.service.title
       element['date'] = res.updated_at.strftime("%Y-%m-%d")
-      element['value'] = res.value
+      element['value_' << res.service.id.to_s] = res.value
+      element['service_id'] = res.service.id.to_s
 
       rows.push element
     end
-    rows
+
+    self.group_by_date rows
   end
 
   def self.to_csv(stat_results)
     require 'csv'
 
-    attributes = %w{id service date value}
+    attributes = []
+    stat_results.each do |res|
+      res.each do |key, val|
+        attributes.push key unless attributes.include? key
+      end
+    end
 
     CSV.generate(headers: true) do |csv|
       csv << attributes
@@ -29,6 +34,27 @@ class StatResult < ActiveRecord::Base
         csv << attributes.map{ |attr| stat[attr] }
       end
     end
+  end
+
+  private
+
+  def self.group_by_date(rows)
+
+    all_dates = {}
+    rows.each do |row|
+      value_key = 'value_' << row['service_id']
+
+      if all_dates.key? row['date']
+        all_dates[row['date']][value_key] = row[value_key] unless all_dates[row['date']].key? value_key
+      else
+        all_dates[row['date']] = {
+            'date'.freeze => row['date'],
+            value_key => row[value_key]
+        }
+      end
+    end
+
+    all_dates.values
   end
 
 end
