@@ -122,6 +122,9 @@ export default class LineGraph extends React.Component {
         let dates = [];
         Object.keys(rows).map((prop, i) => dates.push(rows[prop]['date']));
 
+        if (dates.length === 0)
+            return;
+
         const datesJson = JSON.stringify(dates);
 
         //todo rework it!
