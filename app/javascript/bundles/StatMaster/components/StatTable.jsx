@@ -48,6 +48,8 @@ export default class StatTable extends React.Component {
         const selected_service_id = props.all_services[0].id;
         const services_selected = [selected_service_id];
 
+        const grouped_selected = 'day';
+
         this.state = {
             stat_selected: selected_stat_id,
             services_selected: services_selected,
@@ -67,7 +69,8 @@ export default class StatTable extends React.Component {
             app_bar_expanded: false,
             app_bar_visibility: SHOW,
             table_header: props.table.header_row,
-            waiter_enabled: false
+            waiter_enabled: false,
+            grouped_selected: grouped_selected
         };
     }
 
@@ -151,6 +154,8 @@ export default class StatTable extends React.Component {
             query += '&date_from=' + this.state.date_from;
         if (this.state.date_to)
             query += '&date_to=' + this.state.date_to;
+        if (this.state.grouped_selected)
+            query += '&grouped=' + this.state.grouped_selected;
         return query;
     };
 
@@ -182,6 +187,12 @@ export default class StatTable extends React.Component {
     serviceSelectorChanged = (event, index, values) => {
         if (values.length !== 0)
             this.setState({services_selected: values}, this.renewTable());
+        else return false;
+    };
+
+    groupSelectorChanged = (event, index, value) => {
+        if (value.length !== 0)
+            this.setState({grouped_selected: value}, this.renewTable());
         else return false;
     };
 
@@ -233,17 +244,35 @@ export default class StatTable extends React.Component {
                     <Card>
                         <div style={this.state.app_bar_visibility}>
                             <CardTitle title="Select services"/>
-                            <div style={{marginLeft: '17px'}}>
-                                <SelectField
-                                    multiple={true}
-                                    hintText="Select services"
-                                    value={this.state.services_selected}
-                                    onChange={this.serviceSelectorChanged}
-                                    selectionRenderer={this.serviceSelectorRenderer}
-                                    autoWidth={true}
-                                >
-                                    {this.serviceItems(this.props.all_services)}
-                                </SelectField>
+                            <div style={{marginLeft: '17px', display: 'flex'}}>
+                                <div>
+                                    <SelectField
+                                        multiple={true}
+                                        hintText="Select services"
+                                        value={this.state.services_selected}
+                                        onChange={this.serviceSelectorChanged}
+                                        selectionRenderer={this.serviceSelectorRenderer}
+                                        autoWidth={true}
+                                    >
+                                        {this.serviceItems(this.props.all_services)}
+                                    </SelectField>
+                                </div>
+                                <div style={{marginLeft: '20px'}}>
+                                    <SelectField
+                                        hintText="Grouped by"
+                                        value={this.state.grouped_selected}
+                                        onChange={this.groupSelectorChanged}
+                                    >
+                                        {this.props.grouped_types.map((type, i) =>
+                                            <MenuItem
+                                                key={sKey('st')}
+                                                checked={type === this.state.grouped_selected}
+                                                value={type.id}
+                                                primaryText={type.label}
+                                            />
+                                        )}
+                                    </SelectField>
+                                </div>
                             </div>
                             <CardText>
                                 Services selected: {this.state.services_selected.map((service, i) =>

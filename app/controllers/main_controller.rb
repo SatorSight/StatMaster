@@ -46,9 +46,19 @@ class MainController < ApplicationController
     # header_row = %w(ID Service Date Value)
     table['header_row'] = header_row
 
+    grouped_types = []
+    %w(day week month year).each do |l|
+      element = {}
+
+      element['id'] = l
+      element['label'] = l
+      grouped_types.push element
+    end
+
     @props = {}
     @props['stat_types'] = stat_types
     @props['all_services'] = all_services_array
+    @props['grouped_types'] = grouped_types
     @props['table'] = table
     @props['metrics'] = Metrika::Routes.metrics
   end
@@ -57,17 +67,16 @@ class MainController < ApplicationController
 
     stat_results = get_results params
 
-    # raw_params = {}
-    # raw_params['service_id'] = service_id
-    # raw_params['stat_type_id'] = stat_type_id
-    # raw_params['date_from'] = date_from
-    # raw_params['date_to'] = date_to
-
     if stat_results.nil?
       response = {'status': 'error', 'data': {}}
     else
       data = {}
-      data['table_rows'] = StatResult::to_rows(stat_results)
+
+      if params[:grouped].blank?
+        data['table_rows'] = StatResult::to_rows(stat_results)
+      else
+        data['table_rows'] = stat_results
+      end
 
       response = {'status': 'ok', 'data': data}
     end
@@ -119,9 +128,9 @@ class MainController < ApplicationController
     commits_array = []
     hashes_array.each do |commit|
       c = {
-          'author' => commit['author']['raw'],
-          'date' => commit['date'],
-          'message' => commit['message']
+          'author'.freeze => commit['author']['raw'],
+          'date'.freeze => commit['date'],
+          'message'.freeze => commit['message']
       }
       commits_array.push c if commit_message_ok? c['message']
     end
@@ -152,6 +161,7 @@ class MainController < ApplicationController
   end
 
   def get_results(params)
+    stat_results = []
 
     service_ids = params[:service_id]
     service_ids = service_ids.split ','
@@ -166,12 +176,43 @@ class MainController < ApplicationController
 
     if source_type.code == 'stored'
 
-      stat_results = StatResult.where(service: service_ids, stat_type: stat_type_id)
+      # old version
 
-      stat_results = stat_results.where('updated_at > ?', DateTime.parse(date_from).strftime("%Y-%m-%d")) if date_from.present?
-      stat_results = stat_results.where('updated_at < ?', DateTime.parse(date_to).strftime("%Y-%m-%d")) if date_to.present?
+      # stat_results = StatResult.where(service: service_ids, stat_type: stat_type_id)
+      #
+      # stat_results = stat_results.where('updated_at > ?', DateTime.parse(date_from).strftime("%Y-%m-%d")) if date_from.present?
+      # stat_results = stat_results.where('updated_at < ?', DateTime.parse(date_to).strftime("%Y-%m-%d")) if date_to.present?
+      #
+      # stat_results = stat_results.order created_at: :desc
 
-      stat_results = stat_results.order created_at: :desc
+
+      # Beware of black magic here!
+      #todo rewrite asap
+      if %w(day week month year).include? params[:grouped]
+        exploded_service_ids = service_ids.join ','
+        grouped_query = "SELECT id, sum(value), created_at, updated_at, service_id, stat_type_id
+        FROM stat_results
+        WHERE service_id in (#{exploded_service_ids}) AND stat_type_id = #{stat_type_id}
+        GROUP BY service_id, #{params[:grouped]}(created_at)
+        ORDER BY created_at DESC
+        ;"
+
+        results = ActiveRecord::Base.connection.execute(grouped_query)
+
+        stat_results = []
+        results.each do |res|
+          hash = {}
+
+          hash['date'] = res.third.strftime("%Y-%m-%d")
+          hash['value_'+res.fifth.to_s] = res.second
+          hash['service_id'] = res.fifth.to_s
+
+          stat_results.push hash
+        end
+      else
+        throw ArgumentError
+      end
+
     else
       stat_params = {}
       stat_params['service_id'] = service_id
