@@ -227,7 +227,7 @@ class MainController < ApplicationController
       stat_results = handler.get_results
     end
 
-    stat_results
+    StatResult::group_by_date stat_results
   end
 
   def metrika_get_data(metric, dates_array, services)
