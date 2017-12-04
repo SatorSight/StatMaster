@@ -230,7 +230,9 @@ export default class StatTable extends React.Component {
                             <a href="/">
                                 <MenuItem primaryText="Stats"/>
                             </a>
-                            <MenuItem primaryText="Settings (in work)" disabled={true}/>
+                            <a href="/settings">
+                                <MenuItem primaryText="Settings"/>
+                            </a>
                             {/*<Menu value={this.state.service_selected} onChange={this.menuChanged}>*/}
                             {/*{this.props.all_services.map((service, i) =>*/}
                             {/*<MenuItem value={service.id}*/}
@@ -305,16 +307,6 @@ export default class StatTable extends React.Component {
                                                 onChange={this.dateToChanged}
                                                 hintText="To" mode="landscape"/>
                                 </ToolbarGroup>
-
-                                <ToolbarGroup>
-                                    <RaisedButton
-                                        label="Download csv"
-                                        labelPosition="before"
-                                        primary={true}
-                                        onClick={this.exportCSV}
-                                        icon={<FileDownload/>}
-                                    />
-                                </ToolbarGroup>
                             </Toolbar>
                             <Toolbar>
                                 <div style={{display: 'flex'}}>
@@ -336,6 +328,17 @@ export default class StatTable extends React.Component {
                                                     <MenuItem key={sKey('st')} value={metric} primaryText={metric}/>
                                                 )}
                                             </SelectField>
+                                        </ToolbarGroup>
+                                    </div>
+                                    <div style={{position: 'absolute', right: '10px'}}>
+                                        <ToolbarGroup>
+                                            <RaisedButton
+                                                label="Download csv"
+                                                labelPosition="before"
+                                                primary={true}
+                                                onClick={this.exportCSV}
+                                                icon={<FileDownload/>}
+                                            />
                                         </ToolbarGroup>
                                     </div>
                                 </div>

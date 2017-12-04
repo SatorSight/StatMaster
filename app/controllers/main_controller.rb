@@ -63,6 +63,66 @@ class MainController < ApplicationController
     @props['metrics'] = Metrika::Routes.metrics
   end
 
+  def settings
+    stat_types = StatType.all.where stat_source_type_id: 1
+
+    stat_types_array = []
+    stat_types.each do |stat|
+      stat_hash = {}
+
+      stat_hash['label'] = stat.title
+      stat_hash['id'] = stat.id
+
+      stat_types_array.push stat_hash
+    end
+
+    all_services = Service.all
+    all_services_array = []
+    all_services.each do |s|
+      service = {}
+
+      service['id'] = s.id
+      service['label'] = s.title
+      service['stat_types'] = []
+
+      s.stat_types.each do |stat_type|
+        # type_hash = {
+        #     :id => stat_type.id,
+        #     :label => stat_type.title
+        # }
+        # service['stat_types'].push type_hash
+
+
+        service['stat_types'].push stat_type.id
+
+      end
+
+      all_services_array.push service
+    end
+
+    # pp all_services_array
+    # exit
+
+    @props = {}
+    @props['stat_types'] = stat_types
+    @props['all_services'] = all_services_array
+  end
+
+  def set_stat
+    service_id = params[:service_id]
+    stat_id = params[:stat_id]
+    set_to = params[:set_to]
+
+    service = Service.find service_id
+    stat = StatType.find stat_id
+
+    if set_to.eql? 'enable'
+      service.stat_types.push stat
+    else
+      service.stat_types.delete stat
+    end
+  end
+
   def renew_data
 
     stat_results = get_results params
