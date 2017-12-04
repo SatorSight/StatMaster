@@ -5,16 +5,15 @@ class MainController < ApplicationController
   include Results
   def index
 
+    response = get_data_for default_params
+    response_parsed = response[:data]['table_rows']
+
     table = {}
+    table['rows'] = response_parsed
+
+    #todo rewrite below
 
     stat_types = StatType.all.where stat_source_type_id: 1
-
-    selected_stat_type = StatType.first
-    service = Service.first
-
-    stat_results = StatResult.where(service: service, stat_type: selected_stat_type).order(updated_at: :desc)
-
-    table['rows'] = StatResult::to_rows(stat_results)
 
     service_labels = []
     table['rows'].each do |row|
@@ -100,9 +99,6 @@ class MainController < ApplicationController
       all_services_array.push service
     end
 
-    # pp all_services_array
-    # exit
-
     @props = {}
     @props['stat_types'] = stat_types
     @props['all_services'] = all_services_array
@@ -124,6 +120,22 @@ class MainController < ApplicationController
   end
 
   def renew_data
+    response = get_data_for params
+    render :json => response
+  end
+
+  def default_params
+    first_stat_type = StatType.first
+    service = Service.first
+
+    {
+        service_id: service.id.to_s,
+        stat_type_id: first_stat_type.id.to_s,
+        grouped: 'day'
+    }
+  end
+
+  def get_data_for(params)
 
     stat_results = get_results params
 
@@ -141,7 +153,7 @@ class MainController < ApplicationController
       response = {'status': 'ok', 'data': data}
     end
 
-    render :json => response
+    response
 
   end
 
@@ -229,6 +241,16 @@ class MainController < ApplicationController
     date_from = params[:date_from]
     date_to = params[:date_to]
 
+    if date_from.blank?
+      first_stat = StatResult.all.order(created_at: :asc).first
+      date_from = first_stat.created_at
+    end
+
+    if date_to.blank?
+      last_stat = StatResult.all.order(created_at: :asc).last
+      date_to = last_stat.created_at
+    end
+
     return nil if service_ids.blank? or stat_type_id.blank?
 
     stat_type = StatType.find stat_type_id
@@ -245,6 +267,24 @@ class MainController < ApplicationController
       #
       # stat_results = stat_results.order created_at: :desc
 
+      group_by_day = 'concat(day(created_at), month(created_at), year(created_at))'.freeze
+      group_by_week = 'concat(week(created_at), month(created_at), year(created_at))'.freeze
+      group_by_month = 'concat(month(created_at), year(created_at))'.freeze
+      group_by_year = 'year(created_at)'.freeze
+
+      grouped_by = group_by_day
+
+      case params[:grouped]
+        when 'day'
+          grouped_by = group_by_day
+        when 'week'
+          grouped_by = group_by_week
+        when 'month'
+          grouped_by = group_by_month
+        when 'year'
+          grouped_by = group_by_year
+      end
+
 
       # Beware of black magic here!
       #todo rewrite asap
@@ -253,7 +293,8 @@ class MainController < ApplicationController
         grouped_query = "SELECT id, sum(value), created_at, updated_at, service_id, stat_type_id
         FROM stat_results
         WHERE service_id in (#{exploded_service_ids}) AND stat_type_id = #{stat_type_id}
-        GROUP BY service_id, #{params[:grouped]}(created_at)
+        AND created_at > '#{date_from.strftime("%Y-%m-%d")}' AND created_at < '#{date_to.strftime("%Y-%m-%d")}'
+        GROUP BY service_id, #{grouped_by}
         ORDER BY created_at DESC
         ;"
 
